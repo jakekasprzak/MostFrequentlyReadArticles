@@ -26,14 +26,21 @@ class TopArticlesRepositoryTest {
         repository = TopArticlesRepository(api)
     }
 
+    /**
+     * Creates a list of mock TopArticle objects for testing.
+     * @param count The number of articles to create
+     * @return A list of TopArticle objects with titles "Article 1", "Article 2", etc.
+     */
+    private fun createMockArticles(count: Int): List<TopArticle> {
+        return (1..count).map {
+            TopArticle(title = "Article $it", views = (1000L - it), rank = it)
+        }
+    }
+
     @Test
     fun `getTopArticlesForDate returns success with articles when API call succeeds`() = runTest {
         val date = LocalDate.of(2024, 1, 15)
-        val expectedArticles = listOf(
-            TopArticle(title = "Article_1", views = 1000L, rank = 1),
-            TopArticle(title = "Article_2", views = 900L, rank = 2),
-            TopArticle(title = "Article_3", views = 800L, rank = 3)
-        )
+        val expectedArticles = createMockArticles(3)
         val response = TopArticlesResponse(
             items = listOf(
                 TopArticlesForDay(

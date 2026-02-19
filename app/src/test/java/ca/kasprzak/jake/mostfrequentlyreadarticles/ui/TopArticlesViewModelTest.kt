@@ -32,13 +32,22 @@ class TopArticlesViewModelTest {
         Dispatchers.setMain(testDispatcher)
     }
 
+    /**
+     * Creates a list of mock TopArticle objects for testing.
+     * @param count The number of articles to create
+     * @param titlePrefix Optional prefix for article titles (default: "Article")
+     * @return A list of TopArticle objects with titles "{prefix} 1", "{prefix} 2", etc.
+     */
+    private fun createMockArticles(count: Int, titlePrefix: String = "Article"): List<TopArticle> {
+        return (1..count).map {
+            TopArticle(title = "$titlePrefix $it", views = (1000L - it), rank = it)
+        }
+    }
+
     @Test
     fun `initial state loads yesterday's articles`() = runTest {
         val yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1)
-        val expectedArticles = listOf(
-            TopArticle(title = "Article_1", views = 1000L, rank = 1),
-            TopArticle(title = "Article_2", views = 900L, rank = 2)
-        )
+        val expectedArticles = createMockArticles(2)
 
         coEvery {
             repository.getTopArticlesForDate(yesterday)
@@ -64,13 +73,9 @@ class TopArticlesViewModelTest {
     @Test
     fun `onDateSelected updates state with new date and articles`() = runTest {
         val newDate = LocalDate.of(2024, 1, 20)
-        val initialArticles = listOf(
-            TopArticle(title = "Article_1", views = 1000L, rank = 1)
-        )
-        val newArticles = listOf(
-            TopArticle(title = "Article_2", views = 2000L, rank = 1),
-            TopArticle(title = "Article_3", views = 1500L, rank = 2)
-        )
+        val initialArticles = createMockArticles(1, "Initial Article")
+
+        val newArticles = createMockArticles(1, "New Article")
 
         coEvery {
             repository.getTopArticlesForDate(any())
@@ -108,9 +113,7 @@ class TopArticlesViewModelTest {
 
     @Test
     fun `loading state is set to true while fetching articles`() = runTest {
-        val articles = listOf(
-            TopArticle(title = "Article_1", views = 1000L, rank = 1)
-        )
+        val articles = createMockArticles(1)
 
         coEvery {
             repository.getTopArticlesForDate(any())
@@ -169,9 +172,7 @@ class TopArticlesViewModelTest {
 
         val date2 = LocalDate.of(2024, 1, 20)
         val exception = RuntimeException("Network error")
-        val articles = listOf(
-            TopArticle(title = "Article_1", views = 1000L, rank = 1)
-        )
+        val articles = createMockArticles(1)
 
         coEvery {
             repository.getTopArticlesForDate(yesterday)
@@ -243,9 +244,7 @@ class TopArticlesViewModelTest {
     @Test
     fun `initial display limit is PAGE_SIZE`() = runTest {
         val yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1)
-        val articles = (1..PAGE_SIZE+5).map {
-            TopArticle(title = "Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE + 5)
 
         coEvery {
             repository.getTopArticlesForDate(yesterday)
@@ -267,9 +266,7 @@ class TopArticlesViewModelTest {
     @Test
     fun `changeNumberOfArticlesToDisplay increases display limit by PAGE_SIZE`() = runTest {
         val yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1)
-        val articles = (1..PAGE_SIZE*2).map {
-            TopArticle(title = "Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE * 2)
 
         coEvery {
             repository.getTopArticlesForDate(yesterday)
@@ -283,6 +280,7 @@ class TopArticlesViewModelTest {
             assertTrue(initialState is TopArticlesUiState.Success)
             var success = initialState as TopArticlesUiState.Success
             assertEquals(PAGE_SIZE, success.displayLimit)
+            assertEquals(PAGE_SIZE, success.articlesToDisplay.size)
 
             viewModel.changeNumberOfArticlesToDisplay()
 
@@ -298,9 +296,7 @@ class TopArticlesViewModelTest {
     @Test
     fun `articlesToDisplay returns correct subset of articles`() = runTest {
         val yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1)
-        val articles = (1..PAGE_SIZE*2+5).map {
-            TopArticle(title = "Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE * 2 + 5)
 
         coEvery {
             repository.getTopArticlesForDate(yesterday)
@@ -333,9 +329,7 @@ class TopArticlesViewModelTest {
     @Test
     fun `moreArticlesToDisplay is true when more articles available`() = runTest {
         val yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1)
-        val articles = (1..PAGE_SIZE*3).map {
-            TopArticle(title = "Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE * 3)
 
         coEvery {
             repository.getTopArticlesForDate(yesterday)
@@ -378,9 +372,7 @@ class TopArticlesViewModelTest {
     @Test
     fun `moreArticlesToDisplay is false when all articles are displayed`() = runTest {
         val yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1)
-        val articles = (1..PAGE_SIZE+5).map {
-            TopArticle(title = "Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE + 5)
 
         coEvery {
             repository.getTopArticlesForDate(yesterday)
@@ -413,9 +405,7 @@ class TopArticlesViewModelTest {
     @Test
     fun `changeNumberOfArticlesToDisplay can be called multiple times`() = runTest {
         val yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1)
-        val articles = (1..PAGE_SIZE*4).map {
-            TopArticle(title = "Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE * 4)
 
         coEvery {
             repository.getTopArticlesForDate(yesterday)
@@ -483,9 +473,7 @@ class TopArticlesViewModelTest {
 
     @Test
     fun `changeNumberOfArticlesToDisplay does nothing when in Loading state`() = runTest {
-        val articles = listOf(
-            TopArticle(title = "Article_1", views = 1000L, rank = 1)
-        )
+        val articles = createMockArticles(1)
 
         coEvery {
             repository.getTopArticlesForDate(any())
@@ -514,12 +502,8 @@ class TopArticlesViewModelTest {
     fun `display limit resets to PAGE_SIZE when loading new articles`() = runTest {
         val yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1)
         val newDate = LocalDate.of(2024, 1, 20)
-        val initialArticles = (1..PAGE_SIZE*2).map {
-            TopArticle(title = "Article_$it", views = (1000L - it), rank = it) 
-        }
-        val newArticles = (1..PAGE_SIZE+5).map {
-            TopArticle(title = "NewArticle_$it", views = (2000L - it), rank = it) 
-        }
+        val initialArticles = createMockArticles(PAGE_SIZE * 2, "Initial Article")
+        val newArticles = createMockArticles(PAGE_SIZE + 5, "New Article")
 
         coEvery {
             repository.getTopArticlesForDate(yesterday)
@@ -567,9 +551,7 @@ class TopArticlesViewModelTest {
     @Test
     fun `display limit does not exceed total article count`() = runTest {
         val yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1)
-        val articles = (1..PAGE_SIZE+5).map {
-            TopArticle(title = "Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE + 5)
 
         coEvery {
             repository.getTopArticlesForDate(yesterday)

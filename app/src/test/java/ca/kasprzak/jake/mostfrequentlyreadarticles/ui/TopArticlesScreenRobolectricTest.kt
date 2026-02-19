@@ -40,6 +40,21 @@ class TopArticlesScreenRobolectricTest {
     @get:Rule
     val androidComposeRule = createAndroidComposeRule<ComponentActivity>()
 
+    /**
+     * Creates a list of mock TopArticle objects for testing.
+     * @param count The number of articles to create
+     * @return A list of TopArticle objects with titles "Sample Article 1", "Sample Article 2", etc.
+     */
+    private fun createMockArticles(count: Int): List<TopArticle> {
+        return (1..count).map {
+            TopArticle(
+                rank = it,
+                title = "Sample Article $it",
+                views = (1000L - it)
+            )
+        }
+    }
+
     @Test
     fun loadingState_showsProgressIndicatorAndLoadingText() {
         val fakeViewModel = FakeTopArticlesViewModel(
@@ -74,18 +89,7 @@ class TopArticlesScreenRobolectricTest {
     @Test
     fun articlesDisplayed_showMoreButtonEnabledStateAndCallback() {
 
-        val sampleArticles = listOf(
-            TopArticle(
-                rank = 1,
-                title = "Sample_Article_One",
-                views = 1000,
-            ),
-            TopArticle(
-                rank = 2,
-                title = "Sample_Article_Two",
-                views = 999,
-            )
-        )
+        val sampleArticles = createMockArticles(2)
 
         // displayLimit is 1 to ensure that the "Show more" button will be enabled
         val fakeViewModel = FakeTopArticlesViewModel(
@@ -120,13 +124,7 @@ class TopArticlesScreenRobolectricTest {
 
     @Test
     fun showMoreButtonDisabled_whenNoMoreArticles() {
-        val sampleArticles = listOf(
-            TopArticle(
-                rank = 1,
-                title = "Sample_Article_One",
-                views = 1000,
-            )
-        )
+        val sampleArticles = createMockArticles(1)
 
         // When displayLimit is greater than or equal to the number of articles,
         // moreArticlesToDisplay should be false, which should disable the button.

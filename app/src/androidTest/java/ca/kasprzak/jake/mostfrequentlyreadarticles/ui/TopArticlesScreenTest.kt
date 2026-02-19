@@ -50,12 +50,22 @@ class TopArticlesScreenTest {
         hiltRule.inject()
     }
 
+    /**
+     * Creates a list of mock TopArticle objects for testing.
+     * @param count The number of articles to create
+     * @return A list of TopArticle objects with titles "Test Article 1", "Test Article 2", etc.
+     * and view totals of 1000, 999, 998, etc.
+     */
+    private fun createMockArticles(count: Int): List<TopArticle> {
+        return (1..count).map {
+            TopArticle(title = "Test Article $it", views = (1001L - it), rank = it)
+        }
+    }
+
     @Test
     fun appLaunchesAndShowsTopAppBar() {
 
-        val articles = listOf(
-            TopArticle(title = "Test_Article_1", views = 1000L, rank = 1)
-        )
+        val articles = createMockArticles(1)
 
         val successResult = Result.success(articles)
 
@@ -72,9 +82,7 @@ class TopArticlesScreenTest {
         // The app loads yesterday's articles on init
         // With mock repository, we can control when loading completes
 
-        val articles = listOf(
-            TopArticle(title = "Test_Article_1", views = 1000L, rank = 1)
-        )
+        val articles = createMockArticles(1)
 
         val successResult = Result.success(articles)
 
@@ -97,10 +105,7 @@ class TopArticlesScreenTest {
     @Test
     fun showsArticlesAfterLoading() {
         // Setup: Mock repository to return articles
-        val articles = listOf(
-            TopArticle(title = "Test Article 1", views = 1000L, rank = 1),
-            TopArticle(title = "Test Article 2", views = 900L, rank = 2),
-        )
+        val articles = createMockArticles(2)
 
         val successResult = Result.success(articles)
         coEvery { repository.getTopArticlesForDate(any()) } returns successResult
@@ -134,10 +139,7 @@ class TopArticlesScreenTest {
     @Test
     fun displaysArticleListWithCorrectFormat() {
         // Setup: Mock repository to return articles
-        val articles = listOf(
-            TopArticle(title = "Test_Article_1", views = 1000L, rank = 1),
-            TopArticle(title = "Test_Article_2", views = 900L, rank = 2)
-        )
+        val articles = createMockArticles(2)
 
         val successResult = Result.success(articles)
         coEvery { repository.getTopArticlesForDate(any()) } returns successResult
@@ -154,7 +156,7 @@ class TopArticlesScreenTest {
         composeTestRule.onNode(hasText("#1", substring = true))
             .assertIsDisplayed()
         
-        composeTestRule.onNode(hasText("Test_Article_1", substring = true))
+        composeTestRule.onNode(hasText("Test Article 1", substring = true))
             .assertIsDisplayed()
         
         // Should show views count
@@ -165,9 +167,7 @@ class TopArticlesScreenTest {
     @Test
     fun changeDateButtonIsEnabledWhenDateIsLoaded() {
         // Setup: Mock repository to return an article
-        val articles = listOf(
-            TopArticle(title = "Test_Article_1", views = 1000L, rank = 1)
-        )
+        val articles = createMockArticles(1)
 
         val successResult = Result.success(articles)
         coEvery { repository.getTopArticlesForDate(any()) } returns successResult
@@ -212,9 +212,7 @@ class TopArticlesScreenTest {
     @Test
     fun showMoreButtonIsDisplayedWhenMoreArticlesAvailable() {
         // Setup: Mock repository to return more than PAGE_SIZE articles
-        val articles = (1..PAGE_SIZE+5).map {
-            TopArticle(title = "Test_Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE + 5)
 
         val successResult = Result.success(articles)
         coEvery { repository.getTopArticlesForDate(any()) } returns successResult
@@ -238,9 +236,7 @@ class TopArticlesScreenTest {
     @Test
     fun showMoreButtonIsEnabledWhenMoreArticlesAvailable() {
         // Setup: Mock repository to return more than PAGE_SIZE articles
-        val articles = (1..PAGE_SIZE+5).map {
-            TopArticle(title = "Test_Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE + 5)
 
         val successResult = Result.success(articles)
         coEvery { repository.getTopArticlesForDate(any()) } returns successResult
@@ -264,9 +260,7 @@ class TopArticlesScreenTest {
     @Test
     fun showMoreButtonIsDisabledWhenAllArticlesShown() {
         // Setup: Mock repository to return fewer than PAGE_SIZE articles
-        val articles = (1..PAGE_SIZE-5).map {
-            TopArticle(title = "Test_Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE - 5)
 
         val successResult = Result.success(articles)
         coEvery { repository.getTopArticlesForDate(any()) } returns successResult
@@ -290,9 +284,7 @@ class TopArticlesScreenTest {
     @Test
     fun clickingShowMoreButtonLoadsMoreArticles() {
         // Setup: Mock repository to return more than PAGE_SIZE articles
-        val articles = (1..PAGE_SIZE+5).map {
-            TopArticle(title = "Test_Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE + 5)
 
         val successResult = Result.success(articles)
         coEvery { repository.getTopArticlesForDate(any()) } returns successResult
@@ -328,9 +320,7 @@ class TopArticlesScreenTest {
     @Test
     fun datePickerOpensWhenChangeDateButtonIsClicked() {
         // Setup: Mock repository to return articles
-        val articles = listOf(
-            TopArticle(title = "Test_Article_1", views = 1000L, rank = 1)
-        )
+        val articles = createMockArticles(1)
 
         val successResult = Result.success(articles)
         coEvery { repository.getTopArticlesForDate(any()) } returns successResult
@@ -365,9 +355,7 @@ class TopArticlesScreenTest {
     @Test
     fun datePickerCanBeCancelled() {
         // Setup: Mock repository to return articles
-        val articles = listOf(
-            TopArticle(title = "Test_Article_1", views = 1000L, rank = 1)
-        )
+        val articles = createMockArticles(1)
 
         val successResult = Result.success(articles)
         coEvery { repository.getTopArticlesForDate(any()) } returns successResult
@@ -418,10 +406,7 @@ class TopArticlesScreenTest {
     @Test
     fun articleCardsDisplayRankTitleAndViews() {
         // Setup: Mock repository to return articles
-        val articles = listOf(
-            TopArticle(title = "Test_Article_1", views = 1000L, rank = 1),
-            TopArticle(title = "Test_Article_2", views = 900L, rank = 2)
-        )
+        val articles = createMockArticles(2)
 
         val successResult = Result.success(articles)
         coEvery { repository.getTopArticlesForDate(any()) } returns successResult
@@ -438,7 +423,7 @@ class TopArticlesScreenTest {
         composeTestRule.onNode(hasText("#1", substring = true))
             .assertIsDisplayed()
         
-        composeTestRule.onNode(hasText("Test_Article_1", substring = true))
+        composeTestRule.onNode(hasText("Test Article 1", substring = true))
             .assertIsDisplayed()
         
         composeTestRule.onNode(hasText("1000 views", substring = true))
@@ -448,9 +433,7 @@ class TopArticlesScreenTest {
     @Test
     fun canScrollThroughArticleList() {
         // Setup: Mock repository to return many articles
-        val articles = (1..PAGE_SIZE+5).map {
-            TopArticle(title = "Test_Article_$it", views = (1000L - it), rank = it) 
-        }
+        val articles = createMockArticles(PAGE_SIZE + 5)
 
         val successResult = Result.success(articles)
         coEvery { repository.getTopArticlesForDate(any()) } returns successResult
