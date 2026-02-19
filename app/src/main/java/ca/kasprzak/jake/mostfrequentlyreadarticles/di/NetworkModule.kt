@@ -2,8 +2,11 @@ package ca.kasprzak.jake.mostfrequentlyreadarticles.di
 
 import ca.kasprzak.jake.mostfrequentlyreadarticles.BuildConfig
 import ca.kasprzak.jake.mostfrequentlyreadarticles.data.remote.WikipediaApi
+
+import com.squareup.moshi.FromJson
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.squareup.moshi.Moshi
+
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.InstallIn
 import dagger.Module
@@ -89,10 +92,16 @@ object NetworkModule {
             level = HttpLoggingInterceptor.Level.HEADERS
         }
 
+    class TitleAdapter {
+        @FromJson
+        fun fromJson(title: String): String = title.replace('_', ' ')
+    }
+
     @Provides
     @Singleton
     fun provideMoshi(): Moshi {
         return Moshi.Builder()
+            .add(TitleAdapter())
             .addLast(KotlinJsonAdapterFactory())
             .build()
     }

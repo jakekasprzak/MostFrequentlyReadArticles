@@ -154,7 +154,7 @@ class TopArticlesScreenTest {
         composeTestRule.onNode(hasText("#1", substring = true))
             .assertIsDisplayed()
         
-        composeTestRule.onNode(hasText("Test Article 1", substring = true))
+        composeTestRule.onNode(hasText("Test_Article_1", substring = true))
             .assertIsDisplayed()
         
         // Should show views count
@@ -438,7 +438,7 @@ class TopArticlesScreenTest {
         composeTestRule.onNode(hasText("#1", substring = true))
             .assertIsDisplayed()
         
-        composeTestRule.onNode(hasText("Test Article 1", substring = true))
+        composeTestRule.onNode(hasText("Test_Article_1", substring = true))
             .assertIsDisplayed()
         
         composeTestRule.onNode(hasText("1000 views", substring = true))

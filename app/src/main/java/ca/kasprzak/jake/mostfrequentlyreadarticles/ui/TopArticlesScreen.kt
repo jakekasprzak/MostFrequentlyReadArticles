@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -93,7 +94,7 @@ private fun TopArticlesContent(
     onChangeDateClicked: (LocalDate) -> Unit,
     onShowMoreClicked: () -> Unit
 ) {
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -259,7 +260,7 @@ private fun ArticleRow(article: TopArticle) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "#${article.rank}  ${article.title.replace('_', ' ')}",
+                    text = "#${article.rank}  ${article.title}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
