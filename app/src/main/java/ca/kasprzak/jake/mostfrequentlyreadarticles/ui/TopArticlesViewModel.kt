@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ca.kasprzak.jake.mostfrequentlyreadarticles.data.TopArticlesRepository
 import ca.kasprzak.jake.mostfrequentlyreadarticles.data.remote.TopArticle
+import ca.kasprzak.jake.mostfrequentlyreadarticles.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,9 +50,13 @@ sealed interface TopArticlesUiState {
     }
 }
 
+sealed class UiEvent {
+    data class ShowSnackbar(val messageResId: Int, val extraInfo: String?) : UiEvent()
+}
+
 interface TopArticlesViewModelContract {
     val uiState: StateFlow<TopArticlesUiState>
-    val errorEvents: Flow<String>
+    val uiEvents: Flow<UiEvent>
 
     fun onDateSelected(date: LocalDate)
     fun changeNumberOfArticlesToDisplay()
@@ -67,8 +72,8 @@ class TopArticlesViewModel @Inject constructor(
     )
     override val uiState: StateFlow<TopArticlesUiState> = _uiState.asStateFlow()
 
-    private val _errorEvents = Channel<String>(capacity = Channel.BUFFERED)
-    override val errorEvents: Flow<String> = _errorEvents.receiveAsFlow()
+    private val _uiEvents = Channel<UiEvent>(capacity = Channel.BUFFERED)
+    override val uiEvents: Flow<UiEvent> = _uiEvents.receiveAsFlow()
 
     init {
         // Load yesterday's articles by default
@@ -118,8 +123,12 @@ class TopArticlesViewModel @Inject constructor(
                 _uiState.value = TopArticlesUiState.Error(
                     selectedDate = date
                 )
-
-                _errorEvents.send("Failed to load articles: ${exception?.message ?: "Unknown error"}")
+                _uiEvents.send(
+                    UiEvent.ShowSnackbar(
+                        messageResId = R.string.error_failed_to_load,
+                        extraInfo = exception?.message
+                    )
+                )
             }
         }
     }

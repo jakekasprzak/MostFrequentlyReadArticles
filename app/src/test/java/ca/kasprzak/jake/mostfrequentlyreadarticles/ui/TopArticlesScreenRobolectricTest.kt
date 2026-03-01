@@ -8,15 +8,18 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import ca.kasprzak.jake.mostfrequentlyreadarticles.data.remote.TopArticle
+import ca.kasprzak.jake.mostfrequentlyreadarticles.R
 import ca.kasprzak.jake.mostfrequentlyreadarticles.ui.TopArticlesUiState.Companion.PAGE_SIZE
 
 import java.time.LocalDate
 
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.emptyFlow
+
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.runner.RunWith
@@ -39,6 +42,8 @@ class TopArticlesScreenRobolectricTest {
      */
     @get:Rule
     val androidComposeRule = createAndroidComposeRule<ComponentActivity>()
+
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
     /**
      * Creates a list of mock TopArticle objects for testing.
@@ -65,7 +70,8 @@ class TopArticlesScreenRobolectricTest {
             TopArticlesScreen(viewModel = fakeViewModel)
         }
 
-        androidComposeRule.onNodeWithText("Loading articles…").assertIsDisplayed()
+        val loadingText = context.getString(R.string.loading_articles)
+        androidComposeRule.onNodeWithText(loadingText).assertIsDisplayed()
         // While loading, the article list should not be visible
         androidComposeRule.onNodeWithTag("articleList").assertDoesNotExist()
     }
@@ -83,7 +89,8 @@ class TopArticlesScreenRobolectricTest {
             TopArticlesScreen(viewModel = fakeViewModel)
         }
 
-        androidComposeRule.onNodeWithText("No articles for this date.").assertIsDisplayed()
+        val noArticlesText = context.getString(R.string.no_articles)
+        androidComposeRule.onNodeWithText(noArticlesText).assertIsDisplayed()
     }
 
     @Test
@@ -104,18 +111,20 @@ class TopArticlesScreenRobolectricTest {
             TopArticlesScreen(viewModel = fakeViewModel)
         }
 
+        val showMoreText = context.getString(R.string.show_more)
+
         // "Show more" should be enabled when moreArticlesToDisplay is true
-        androidComposeRule.onNodeWithText("Show more").assertIsDisplayed().performClick()
+        androidComposeRule.onNodeWithText(showMoreText).assertIsDisplayed().performClick()
 
         // Verify that the ViewModel callback was invoked
         assertEquals(1, fakeViewModel.showMoreClickCount)
 
         // Verify that "Show more" is no longer enabled
-        androidComposeRule.onNodeWithText("Show more").assertIsNotEnabled()
+        androidComposeRule.onNodeWithText(showMoreText).assertIsNotEnabled()
 
 
         // "Show more" should be disabled when moreArticlesToDisplay is true
-        androidComposeRule.onNodeWithText("Show more").assertIsDisplayed().performClick()
+        androidComposeRule.onNodeWithText(showMoreText).assertIsDisplayed().performClick()
 
         // Verify that the ViewModel callback was not invoked
         assertEquals(1, fakeViewModel.showMoreClickCount)
@@ -140,8 +149,64 @@ class TopArticlesScreenRobolectricTest {
             TopArticlesScreen(viewModel = fakeViewModel)
         }
 
+        val showMoreText = context.getString(R.string.show_more)
+
         // When moreArticlesToDisplay is false the "Show more" button should be disabled
-        androidComposeRule.onNodeWithText("Show more").assertIsNotEnabled()
+        androidComposeRule.onNodeWithText(showMoreText).assertIsNotEnabled()
+    }
+
+    @Test
+    fun snackbarShows_whenErrorEventEmitted() {
+        val fakeViewModel = FakeTopArticlesViewModel(
+            initialState = TopArticlesUiState.Success(
+                allArticles = emptyList(),
+                selectedDate = LocalDate.of(2024, 1, 1)
+            )
+        )
+
+        androidComposeRule.setContent {
+            TopArticlesScreen(viewModel = fakeViewModel)
+        }
+
+        val errorMessage = "Network Error"
+        fakeViewModel.emitError(UiEvent.ShowSnackbar(R.string.error_failed_to_load, errorMessage))
+
+        val expectedMessage = "${context.getString(R.string.error_failed_to_load)}: $errorMessage"
+        
+        // Use a longer timeout because Snackbars might have a short entrance animation
+        androidComposeRule.waitUntil(5000) {
+            androidComposeRule.onAllNodes(androidx.compose.ui.test.hasText(expectedMessage))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+
+        androidComposeRule.onNodeWithText(expectedMessage).assertIsDisplayed()
+    }
+
+    @Test
+    fun snackbarShows_whenUnknownErrorEventEmitted() {
+        val fakeViewModel = FakeTopArticlesViewModel(
+            initialState = TopArticlesUiState.Success(
+                allArticles = emptyList(),
+                selectedDate = LocalDate.of(2024, 1, 1)
+            )
+        )
+
+        androidComposeRule.setContent {
+            TopArticlesScreen(viewModel = fakeViewModel)
+        }
+
+
+        fakeViewModel.emitError(UiEvent.ShowSnackbar(R.string.error_failed_to_load, null))
+
+        val expectedMessage = "${context.getString(R.string.error_failed_to_load)}: ${context.getString(R.string.unknown_error)}"
+
+        // Use a longer timeout because Snackbars might have a short entrance animation
+        androidComposeRule.waitUntil(5000) {
+            androidComposeRule.onAllNodes(androidx.compose.ui.test.hasText(expectedMessage))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+
+        androidComposeRule.onNodeWithText(expectedMessage).assertIsDisplayed()
     }
 }
 
@@ -155,7 +220,14 @@ private class FakeTopArticlesViewModel(
     private val _uiState = MutableStateFlow(initialState)
     override val uiState: StateFlow<TopArticlesUiState> = _uiState
 
-    override val errorEvents: Flow<String> = emptyFlow()
+    // mimic the behaviour of a channel by setting extraBufferCapacity to 1 to ensure that the
+    // UI collects the event when it is ready to do so
+    private val _uiEvents = MutableSharedFlow<UiEvent>(extraBufferCapacity = 1)
+    override val uiEvents = _uiEvents.asSharedFlow()
+
+    fun emitError(event: UiEvent) {
+        _uiEvents.tryEmit(event)
+    }
 
     var lastSelectedDate: LocalDate? = null
         private set
@@ -178,6 +250,3 @@ private class FakeTopArticlesViewModel(
         }
     }
 }
-
-
-

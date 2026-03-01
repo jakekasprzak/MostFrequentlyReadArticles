@@ -13,7 +13,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.core.app.ActivityScenario
+import androidx.test.platform.app.InstrumentationRegistry
 import ca.kasprzak.jake.mostfrequentlyreadarticles.MainActivity
+import ca.kasprzak.jake.mostfrequentlyreadarticles.R
 import ca.kasprzak.jake.mostfrequentlyreadarticles.data.TopArticlesRepository
 import ca.kasprzak.jake.mostfrequentlyreadarticles.data.remote.TopArticle
 import ca.kasprzak.jake.mostfrequentlyreadarticles.ui.TopArticlesUiState.Companion.PAGE_SIZE
@@ -45,6 +47,8 @@ class TopArticlesScreenTest {
     @Inject
     lateinit var repository: TopArticlesRepository
 
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
     @Before
     fun init() {
         hiltRule.inject()
@@ -73,7 +77,7 @@ class TopArticlesScreenTest {
 
         ActivityScenario.launch(MainActivity::class.java)
 
-        composeTestRule.onNodeWithText("Most Read Wikipedia Articles")
+        composeTestRule.onNodeWithText(context.getString(R.string.app_title))
             .assertIsDisplayed()
     }
 
@@ -97,10 +101,9 @@ class TopArticlesScreenTest {
 
         ActivityScenario.launch(MainActivity::class.java)
 
-        composeTestRule.onNodeWithText("Loading articles…")
+        composeTestRule.onNodeWithText(context.getString(R.string.loading_articles))
             .assertIsDisplayed()
     }
-
 
     @Test
     fun showsArticlesAfterLoading() {
@@ -114,16 +117,16 @@ class TopArticlesScreenTest {
 
         // Wait for loading to complete
         composeTestRule.waitUntil(timeoutMillis = 5000) {
-            composeTestRule.onAllNodes(hasText("Date", substring = true))
+            composeTestRule.onAllNodes(hasText(context.getString(R.string.date_label), substring = true))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         
         // Should show date label
-        composeTestRule.onNode(hasText("Date", substring = true))
+        composeTestRule.onNode(hasText(context.getString(R.string.date_label), substring = true))
             .assertIsDisplayed()
         
         // Should show "Change date" button
-        composeTestRule.onNodeWithText("Change date")
+        composeTestRule.onNodeWithText(context.getString(R.string.change_date_button))
             .assertIsDisplayed()
             .assertIsEnabled()
 
@@ -160,7 +163,7 @@ class TopArticlesScreenTest {
             .assertIsDisplayed()
         
         // Should show views count
-        composeTestRule.onNode(hasText("1000 views", substring = true))
+        composeTestRule.onNode(hasText(context.getString(R.string.views_count, 1000L), substring = true))
             .assertIsDisplayed()
     }
 
@@ -176,11 +179,11 @@ class TopArticlesScreenTest {
 
         // Wait for date to load
         composeTestRule.waitUntil(timeoutMillis = 5000) {
-            composeTestRule.onAllNodes(hasText("Change date"))
+            composeTestRule.onAllNodes(hasText(context.getString(R.string.change_date_button)))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         
-        composeTestRule.onNodeWithText("Change date")
+        composeTestRule.onNodeWithText(context.getString(R.string.change_date_button))
             .assertIsDisplayed()
             .assertIsEnabled()
     }
@@ -198,14 +201,14 @@ class TopArticlesScreenTest {
 
         // Wait for loading to complete
         composeTestRule.waitUntil(timeoutMillis = 5000) {
-            composeTestRule.onAllNodes(hasText("No articles for this date."))
+            composeTestRule.onAllNodes(hasText(context.getString(R.string.no_articles)))
                 .fetchSemanticsNodes().isNotEmpty() ||
-            composeTestRule.onAllNodes(hasText("Change date"))
+            composeTestRule.onAllNodes(hasText(context.getString(R.string.change_date_button)))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         
         // Should show "No articles for this date."
-        composeTestRule.onNodeWithText("No articles for this date.")
+        composeTestRule.onNodeWithText(context.getString(R.string.no_articles))
             .assertIsDisplayed()
     }
 
@@ -228,7 +231,7 @@ class TopArticlesScreenTest {
         // Scroll to bottom to find "Show more" button
         composeTestRule.onNodeWithTag("articleList").performScrollToIndex(PAGE_SIZE)
 
-        composeTestRule.onNodeWithText("Show more")
+        composeTestRule.onNodeWithText(context.getString(R.string.show_more))
             .performScrollTo()
             .assertIsDisplayed()
     }
@@ -252,7 +255,7 @@ class TopArticlesScreenTest {
         composeTestRule.onNodeWithTag("articleList").performScrollToIndex(PAGE_SIZE)
 
         // Check the "Show more" button is enabled
-        composeTestRule.onNodeWithText("Show more")
+        composeTestRule.onNodeWithText(context.getString(R.string.show_more))
             .performScrollTo()
             .assertIsEnabled()
     }
@@ -276,7 +279,7 @@ class TopArticlesScreenTest {
         composeTestRule.onNodeWithTag("articleList").performScrollToIndex(PAGE_SIZE - 5)
 
         // Button should be disabled when all articles are shown
-        composeTestRule.onNodeWithText("Show more")
+        composeTestRule.onNodeWithText(context.getString(R.string.show_more))
             .performScrollTo()
             .assertIsNotEnabled()
     }
@@ -300,7 +303,7 @@ class TopArticlesScreenTest {
         composeTestRule.onNodeWithTag("articleList").performScrollToIndex(PAGE_SIZE)
 
         // Find and click "Show more" button
-        val showMoreButton = composeTestRule.onNodeWithText("Show more")
+        val showMoreButton = composeTestRule.onNodeWithText(context.getString(R.string.show_more))
         showMoreButton.performScrollTo()
         showMoreButton.assertIsEnabled()
         showMoreButton.performClick()
@@ -334,21 +337,21 @@ class TopArticlesScreenTest {
         }
         
         // Click "Change date" button
-        composeTestRule.onNodeWithText("Change date")
+        composeTestRule.onNodeWithText(context.getString(R.string.change_date_button))
             .assertIsDisplayed()
             .assertIsEnabled()
             .performClick()
         
         // Date picker dialog should appear
         composeTestRule.waitUntil(timeoutMillis = 2000) {
-            composeTestRule.onAllNodes(hasText("OK"))
+            composeTestRule.onAllNodes(hasText(context.getString(R.string.ok)))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         
-        composeTestRule.onNodeWithText("OK")
+        composeTestRule.onNodeWithText(context.getString(R.string.ok))
             .assertIsDisplayed()
         
-        composeTestRule.onNodeWithText("Cancel")
+        composeTestRule.onNodeWithText(context.getString(R.string.cancel))
             .assertIsDisplayed()
     }
 
@@ -369,37 +372,37 @@ class TopArticlesScreenTest {
         }
         
         // Open date picker
-        composeTestRule.onNodeWithText("Change date")
+        composeTestRule.onNodeWithText(context.getString(R.string.change_date_button))
             .assertIsDisplayed()
             .assertIsEnabled()
             .performClick()
         
         // Wait for date picker to appear
         composeTestRule.waitUntil(timeoutMillis = 2000) {
-            composeTestRule.onAllNodes(hasText("Cancel"))
+            composeTestRule.onAllNodes(hasText(context.getString(R.string.cancel)))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         
         // Click Cancel
-        composeTestRule.onNodeWithText("Cancel")
+        composeTestRule.onNodeWithText(context.getString(R.string.cancel))
             .assertIsDisplayed()
             .performClick()
         
         // Date picker should be dismissed
         composeTestRule.waitUntil(timeoutMillis = 2000) {
-            composeTestRule.onAllNodes(hasText("Change date"))
+            composeTestRule.onAllNodes(hasText(context.getString(R.string.change_date_button)))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         
         // Original screen should still be visible
-        composeTestRule.onNodeWithText("Change date")
+        composeTestRule.onNodeWithText(context.getString(R.string.change_date_button))
             .assertIsDisplayed()
 
         // Date picker dialog buttons should not be visible
-        composeTestRule.onNodeWithText("OK")
+        composeTestRule.onNodeWithText(context.getString(R.string.ok))
             .assertIsNotDisplayed()
 
-        composeTestRule.onNodeWithText("Cancel")
+        composeTestRule.onNodeWithText(context.getString(R.string.cancel))
             .assertIsNotDisplayed()
     }
 
@@ -426,7 +429,7 @@ class TopArticlesScreenTest {
         composeTestRule.onNode(hasText("Test Article 1", substring = true))
             .assertIsDisplayed()
         
-        composeTestRule.onNode(hasText("1000 views", substring = true))
+        composeTestRule.onNode(hasText(context.getString(R.string.views_count, 1000L), substring = true))
             .assertIsDisplayed()
     }
 
@@ -450,7 +453,7 @@ class TopArticlesScreenTest {
 
         // Verify that the list is scrollable
         // Scroll to find "Show more" button at the bottom
-        composeTestRule.onNodeWithText("Show more")
+        composeTestRule.onNodeWithText(context.getString(R.string.show_more))
             .performScrollTo()
             .assertIsDisplayed()
     }
@@ -470,13 +473,12 @@ class TopArticlesScreenTest {
 
         // Wait for error state
         composeTestRule.waitUntil(timeoutMillis = 5000) {
-            composeTestRule.onAllNodes(hasText("Failed to load articles", substring = true))
+            composeTestRule.onAllNodes(hasText(context.getString(R.string.error_failed_to_load), substring = true))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         
         // Should show error message in snackbar
-        composeTestRule.onNode(hasText("Failed to load articles", substring = true))
+        composeTestRule.onNode(hasText(context.getString(R.string.error_failed_to_load), substring = true))
             .assertIsDisplayed()
     }
 }
-

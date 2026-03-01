@@ -32,11 +32,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ca.kasprzak.jake.mostfrequentlyreadarticles.data.remote.TopArticle
+import ca.kasprzak.jake.mostfrequentlyreadarticles.R
 import java.time.format.DateTimeFormatter
 import java.time.Instant
 import java.time.LocalDate
@@ -52,10 +55,22 @@ fun TopArticlesScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        viewModel.errorEvents.collect { message ->
-            snackbarHostState.showSnackbar(message)
+    // Handle One-Time UI Events (Errors/Snackbars)
+    LaunchedEffect(viewModel.uiEvents) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is UiEvent.ShowSnackbar -> {
+                    val baseMessage = context.getString(event.messageResId)
+                    val fullMessage = if (event.extraInfo != null) {
+                        "$baseMessage: ${event.extraInfo}"
+                    } else {
+                        "$baseMessage: ${context.getString(R.string.unknown_error)}"
+                    }
+                    snackbarHostState.showSnackbar(fullMessage)
+                }
+            }
         }
     }
 
@@ -100,7 +115,7 @@ private fun TopArticlesContent(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(text = "Most Read Wikipedia Articles") }
+                title = { Text(text = stringResource(R.string.app_title)) }
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
@@ -120,17 +135,17 @@ private fun TopArticlesContent(
             ) {
                 Column {
                     Text(
-                        text = "Date",
+                        text = stringResource(R.string.date_label),
                         style = MaterialTheme.typography.labelMedium
                     )
                     Text(
-                        text = selectedDate?.format(dateFormatter) ?: "Loading...",
+                        text = selectedDate?.format(dateFormatter) ?: stringResource(R.string.loading_placeholder),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
                 Button(onClick = { showDatePicker = true }, enabled = !isLoading) {
-                    Text(text = "Change date")
+                    Text(text = stringResource(R.string.change_date_button))
                 }
             }
 
@@ -142,7 +157,7 @@ private fun TopArticlesContent(
                 ) {
                     CircularProgressIndicator()
                     Text(
-                        text = "Loading articles…",
+                        text = stringResource(R.string.loading_articles),
                         modifier = Modifier.padding(top = 12.dp)
                     )
                 }
@@ -179,12 +194,12 @@ private fun TopArticlesContent(
                         showDatePicker = false
                     }
                 ) {
-                    Text("OK")
+                    Text(stringResource(R.string.ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         ) {
@@ -207,7 +222,7 @@ private fun ArticlesList(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "No articles for this date.")
+            Text(text = stringResource(R.string.no_articles))
         }
     } else {
         LazyColumn(
@@ -239,7 +254,7 @@ private fun ShowMoreButton(
             .padding(vertical = 8.dp),
         enabled = moreArticlesToDisplay
     ) {
-        Text(text = "Show more")
+        Text(text = stringResource(R.string.show_more))
     }
 }
 
@@ -260,12 +275,12 @@ private fun ArticleRow(article: TopArticle) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "#${article.rank}  ${article.title}",
+                    text = stringResource(R.string.rank_title_format, article.rank, article.title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "${article.views} views",
+                    text = stringResource(R.string.views_count, article.views),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }

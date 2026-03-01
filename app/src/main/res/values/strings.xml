@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">Most Frequently Read Articles</string>
+    <string name="app_title">Most Read Wikipedia Articles</string>
+    <string name="date_label">Date</string>
+    <string name="loading_placeholder">Loading…</string>
+    <string name="change_date_button">Change date</string>
+    <string name="loading_articles">Loading articles…</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="no_articles">No articles for this date.</string>
+    <string name="show_more">Show more</string>
+    <string name="views_count">%1$d views</string>
+    <string name="rank_title_format">#%1$d  %2$s</string>
+    <string name="error_failed_to_load">Failed to load articles</string>
+    <string name="unknown_error">Unknown error</string>
 </resources>
