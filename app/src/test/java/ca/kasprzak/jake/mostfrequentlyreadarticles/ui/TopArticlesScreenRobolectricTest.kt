@@ -122,7 +122,6 @@ class TopArticlesScreenRobolectricTest {
         // Verify that "Show more" is no longer enabled
         androidComposeRule.onNodeWithText(showMoreText).assertIsNotEnabled()
 
-
         // "Show more" should be disabled when moreArticlesToDisplay is true
         androidComposeRule.onNodeWithText(showMoreText).assertIsDisplayed().performClick()
 
@@ -169,7 +168,8 @@ class TopArticlesScreenRobolectricTest {
         }
 
         val errorMessage = "Network Error"
-        fakeViewModel.emitError(UiEvent.ShowSnackbar(R.string.error_failed_to_load, errorMessage))
+        fakeViewModel.emitError(UiEvent.ShowFailedtoLoadArticlesSnackbar(R.string.error_failed_to_load,
+            errorMessage))
 
         val expectedMessage = "${context.getString(R.string.error_failed_to_load)}: $errorMessage"
         
@@ -196,7 +196,8 @@ class TopArticlesScreenRobolectricTest {
         }
 
 
-        fakeViewModel.emitError(UiEvent.ShowSnackbar(R.string.error_failed_to_load, null))
+        fakeViewModel.emitError(UiEvent.ShowFailedtoLoadArticlesSnackbar(
+            R.string.error_failed_to_load, null))
 
         val expectedMessage = "${context.getString(R.string.error_failed_to_load)}: ${context.getString(R.string.unknown_error)}"
 
@@ -235,9 +236,17 @@ private class FakeTopArticlesViewModel(
     var showMoreClickCount: Int = 0
         private set
 
+    var lastClickedArticle: TopArticle? = null
+        private set
+
     override fun onDateSelected(date: LocalDate) {
         lastSelectedDate = date
         // For these tests we don't need to actually change the state when a new date is selected.
+    }
+
+    override fun onArticleClicked(article: TopArticle) {
+
+        lastClickedArticle = article
     }
 
     override fun changeNumberOfArticlesToDisplay() {

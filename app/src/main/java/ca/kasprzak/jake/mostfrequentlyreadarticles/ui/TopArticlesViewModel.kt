@@ -1,5 +1,7 @@
 package ca.kasprzak.jake.mostfrequentlyreadarticles.ui
 
+import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ca.kasprzak.jake.mostfrequentlyreadarticles.data.TopArticlesRepository
@@ -51,7 +53,9 @@ sealed interface TopArticlesUiState {
 }
 
 sealed class UiEvent {
-    data class ShowSnackbar(val messageResId: Int, val extraInfo: String?) : UiEvent()
+    data class ShowFailedtoLoadArticlesSnackbar(val messageResId: Int, val extraInfo: String?) : UiEvent()
+    data class ShowCouldNotOpenArticleSnackbar(val messageResId: Int): UiEvent()
+    data class OpenUrl(val uri: Uri) : UiEvent()
 }
 
 interface TopArticlesViewModelContract {
@@ -60,6 +64,7 @@ interface TopArticlesViewModelContract {
 
     fun onDateSelected(date: LocalDate)
     fun changeNumberOfArticlesToDisplay()
+    fun onArticleClicked(article: TopArticle)
 }
 
 @HiltViewModel
@@ -97,6 +102,17 @@ class TopArticlesViewModel @Inject constructor(
         }
     }
 
+    override fun onArticleClicked(article: TopArticle) {
+        viewModelScope.launch {
+
+            if (article.url.isEmpty()) {
+                _uiEvents.send(UiEvent.ShowCouldNotOpenArticleSnackbar(R.string.cannot_open_article_url_not_available))
+            } else {
+                _uiEvents.send(UiEvent.OpenUrl(article.url.toUri()))
+            }
+        }
+    }
+
     private fun loadArticlesForDate(date: LocalDate) {
         viewModelScope.launch {
             // Get previous articles if in Success state to show while loading
@@ -112,8 +128,23 @@ class TopArticlesViewModel @Inject constructor(
 
             val result = repository.getTopArticlesForDate(date)
             result.getOrNull()?.let { articles ->
+
+                // If the URL is invalid, replace it with an empty string
+                val processedArticles = articles.map { article ->
+                    try {
+                        if (article.url.isNotEmpty()) {
+                            article.url.toUri().toString()
+                            article
+                        } else {
+                            article
+                        }
+                    } catch (e: Exception) {
+                        article.copy(url = "")
+                    }
+                }
+
                 _uiState.value = TopArticlesUiState.Success(
-                    allArticles = articles,
+                    allArticles = processedArticles,
                     selectedDate = date,
                     displayLimit = TopArticlesUiState.PAGE_SIZE
                 )
@@ -124,7 +155,7 @@ class TopArticlesViewModel @Inject constructor(
                     selectedDate = date
                 )
                 _uiEvents.send(
-                    UiEvent.ShowSnackbar(
+                    UiEvent.ShowFailedtoLoadArticlesSnackbar(
                         messageResId = R.string.error_failed_to_load,
                         extraInfo = exception?.message
                     )

@@ -92,16 +92,11 @@ object NetworkModule {
             level = HttpLoggingInterceptor.Level.HEADERS
         }
 
-    class TitleAdapter {
-        @FromJson
-        fun fromJson(title: String): String = title.replace('_', ' ')
-    }
 
     @Provides
     @Singleton
     fun provideMoshi(): Moshi {
         return Moshi.Builder()
-            .add(TitleAdapter())
             .addLast(KotlinJsonAdapterFactory())
             .build()
     }

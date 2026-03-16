@@ -38,5 +38,7 @@ data class TopArticlesForDay(
 data class TopArticle(
     @Json(name = "article") val title: String,
     val views: Long,
-    val rank: Int
+    val rank: Int,
+    // This url field below is to be populated in the repository based on the project and title.
+    val url: String = ""
 )

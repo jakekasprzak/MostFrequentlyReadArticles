@@ -1,21 +1,28 @@
 package ca.kasprzak.jake.mostfrequentlyreadarticles.ui
 
+import android.net.Uri
 import app.cash.turbine.test
 import ca.kasprzak.jake.mostfrequentlyreadarticles.data.TopArticlesRepository
 import ca.kasprzak.jake.mostfrequentlyreadarticles.data.remote.TopArticle
 import ca.kasprzak.jake.mostfrequentlyreadarticles.ui.TopArticlesUiState.Companion.PAGE_SIZE
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.StandardTestDispatcher
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -26,21 +33,40 @@ class TopArticlesViewModelTest {
     private lateinit var repository: TopArticlesRepository
     private val testDispatcher = StandardTestDispatcher()
 
+
     @Before
     fun setup() {
         repository = mockk()
         Dispatchers.setMain(testDispatcher)
+
+        // Mock Uri.parse globally so tests don't fail by default
+        mockkStatic(Uri::class)
+        val mockUri = mockk<Uri>()
+        every { Uri.parse(any()) } returns mockUri
+        every { mockUri.toString() } returns "mock_url"
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+        unmockkStatic(Uri::class)
     }
 
     /**
      * Creates a list of mock TopArticle objects for testing.
      * @param count The number of articles to create
      * @param titlePrefix Optional prefix for article titles (default: "Article")
-     * @return A list of TopArticle objects with titles "{prefix} 1", "{prefix} 2", etc.
+     * @return A list of TopArticle objects with titles "{prefix} 1", "{prefix} 2", etc.,
+     * and the appropriate URLs for each article
      */
     private fun createMockArticles(count: Int, titlePrefix: String = "Article"): List<TopArticle> {
         return (1..count).map {
-            TopArticle(title = "$titlePrefix $it", views = (1000L - it), rank = it)
+            TopArticle(
+                title = "$titlePrefix $it",
+                views = (1000L - it),
+                rank = it,
+                url = "https://en.wikipedia.org/wiki/${titlePrefix}_$it"
+            )
         }
     }
 
@@ -576,5 +602,73 @@ class TopArticlesViewModelTest {
             assertFalse(success.moreArticlesToDisplay)
         }
     }
-}
 
+    @Test
+    fun `when article url parsing succeeds, the original url is preserved`() = runTest {
+        val yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1)
+        val testUrl = "https://en.wikipedia.org/wiki/Android"
+        val articles = listOf(
+            TopArticle(title = "Android", views = 1000, rank = 1, url = testUrl)
+        )
+
+        // Mock Uri.parse to succeed (required for unit tests)
+        mockkStatic(Uri::class)
+        val mockUri = mockk<Uri>()
+        every { Uri.parse(testUrl) } returns mockUri
+        every { mockUri.toString() } returns testUrl
+
+        coEvery {
+            repository.getTopArticlesForDate(yesterday)
+        } returns Result.success(articles)
+
+        val viewModel = TopArticlesViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = expectMostRecentItem()
+            assertTrue("Expected Success state but was ${state::class.simpleName}",
+                state is TopArticlesUiState.Success)
+
+            val success = state as TopArticlesUiState.Success
+            val actualUrl = success.allArticles.first().url
+
+            // Verify that the article's URL remains unchanged when parsing is successful
+            assertEquals(testUrl, actualUrl)
+        }
+
+        unmockkStatic(Uri::class)
+    }
+
+    @Test
+    fun `when article url parsing fails, url is set to empty string`() = runTest {
+        mockkStatic(Uri::class)
+        val badUrl = "malformed_url"
+
+        // Force Uri.parse to throw an exception for the bad URL
+        every { Uri.parse(badUrl) } throws IllegalArgumentException("Invalid URL")
+
+        val yesterday = LocalDate.now(ZoneOffset.UTC).minusDays(1)
+        val articles = listOf(
+            TopArticle(title = "Bad URL Article", views = 100, rank = 1, url = badUrl)
+        )
+
+        coEvery {
+            repository.getTopArticlesForDate(yesterday)
+        } returns Result.success(articles)
+
+        val viewModel = TopArticlesViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = expectMostRecentItem()
+            assertTrue(state is TopArticlesUiState.Success)
+            val success = state as TopArticlesUiState.Success
+            
+            // Verify that the article's URL was cleared due to the parsing exception
+            assertEquals("", success.allArticles.first().url)
+        }
+        
+        unmockkStatic(Uri::class)
+    }
+
+}

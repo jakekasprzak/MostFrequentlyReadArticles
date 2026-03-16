@@ -1,6 +1,7 @@
 package ca.kasprzak.jake.mostfrequentlyreadarticles.ui
 
 
+import android.net.Uri
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -22,6 +23,10 @@ import ca.kasprzak.jake.mostfrequentlyreadarticles.ui.TopArticlesUiState.Compani
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -54,15 +59,24 @@ class TopArticlesScreenTest {
         hiltRule.inject()
     }
 
+    @After
+    fun tearDown() {
+        // To ensure that tests are "cleaned up" as they should be
+        unmockkStatic(Uri::class)
+    }
+
     /**
      * Creates a list of mock TopArticle objects for testing.
      * @param count The number of articles to create
      * @return A list of TopArticle objects with titles "Test Article 1", "Test Article 2", etc.
-     * and view totals of 1000, 999, 998, etc.
+     * and view totals of 1000, 999, 998, etc., and the appropriate URLs
      */
     private fun createMockArticles(count: Int): List<TopArticle> {
         return (1..count).map {
-            TopArticle(title = "Test Article $it", views = (1001L - it), rank = it)
+            TopArticle(title = "Test Article $it",
+                views = (1001L - it),
+                rank = it,
+                url = "https://en.wikipedia.org/Test_Article_$it")
         }
     }
 
@@ -480,5 +494,32 @@ class TopArticlesScreenTest {
         // Should show error message in snackbar
         composeTestRule.onNode(hasText(context.getString(R.string.error_failed_to_load), substring = true))
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun clickingArticleWithBadUrlShowsSnackbar() {
+        mockkStatic(Uri::class)
+        val badUrl = "bad_url_string"
+        every { Uri.parse(badUrl) } throws IllegalArgumentException("Parsing failed")
+
+        val articles = listOf(
+            TopArticle(title = "Malformed URL Article", views = 500, rank = 1, url = badUrl)
+        )
+        coEvery { repository.getTopArticlesForDate(any()) } returns Result.success(articles)
+
+        ActivityScenario.launch(MainActivity::class.java)
+
+        composeTestRule.waitUntil(timeoutMillis = 5000) {
+            composeTestRule.onAllNodes(hasText("Malformed URL Article", substring = true))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        
+        composeTestRule.onNodeWithText("Malformed URL Article", substring = true)
+            .performClick()
+
+        composeTestRule.onNodeWithText(context.getString(R.string.cannot_open_article_url_not_available))
+            .assertIsDisplayed()
+            
+        unmockkStatic(Uri::class)
     }
 }

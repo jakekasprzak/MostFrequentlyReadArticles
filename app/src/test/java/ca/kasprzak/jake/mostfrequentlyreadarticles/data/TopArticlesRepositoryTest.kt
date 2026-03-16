@@ -29,18 +29,20 @@ class TopArticlesRepositoryTest {
     /**
      * Creates a list of mock TopArticle objects for testing.
      * @param count The number of articles to create
-     * @return A list of TopArticle objects with titles "Article 1", "Article 2", etc.
+     * @return A list of TopArticle objects with titles "Article_1", "Article_2", etc., as
+     * the titles would be returned in that form, and each url must be an empty string, as that
+     * is what each url is before the repository builds it
      */
-    private fun createMockArticles(count: Int): List<TopArticle> {
+    private fun createMockRawArticles(count: Int): List<TopArticle> {
         return (1..count).map {
-            TopArticle(title = "Article $it", views = (1000L - it), rank = it)
+            TopArticle(title = "Article_$it", views = (1000L - it), rank = it, url = "")
         }
     }
 
     @Test
     fun `getTopArticlesForDate returns success with articles when API call succeeds`() = runTest {
         val date = LocalDate.of(2024, 1, 15)
-        val expectedArticles = createMockArticles(3)
+        val expectedRawArticles = createMockRawArticles(1)
         val response = TopArticlesResponse(
             items = listOf(
                 TopArticlesForDay(
@@ -49,7 +51,7 @@ class TopArticlesRepositoryTest {
                     year = "2024",
                     month = "01",
                     day = "15",
-                    articles = expectedArticles
+                    articles = expectedRawArticles
                 )
             )
         )
@@ -58,27 +60,31 @@ class TopArticlesRepositoryTest {
             api.getTopArticlesForDate(
                 year = "2024",
                 month = "01",
-                day = "15"
+                day = "15",
+                project = "en.wikipedia"
             )
         } returns response
 
         val result = repository.getTopArticlesForDate(date)
 
         assertTrue(result.isSuccess)
-        assertEquals(expectedArticles, result.getOrNull())
+        val articles = result.getOrNull()!!
+        assertEquals(1, articles.size)
+        assertEquals("Article 1", articles[0].title)
+        assertEquals("https://en.wikipedia.org/wiki/Article_1", articles[0].url)
     }
 
     @Test
     fun `getTopArticlesForDate formats single digit months and days with leading zeros`() = runTest {
         val date = LocalDate.of(2024, 1, 5)
         coEvery {
-            api.getTopArticlesForDate(any(), any(), any())
+            api.getTopArticlesForDate(any(), any(), any(), any())
         } returns TopArticlesResponse(emptyList())
 
         repository.getTopArticlesForDate(date)
 
         coVerify {
-            api.getTopArticlesForDate(year = "2024", month = "01", day = "05")
+            api.getTopArticlesForDate(year = "2024", month = "01", day = "05", project = "en.wikipedia")
         }
     }
 
@@ -91,7 +97,8 @@ class TopArticlesRepositoryTest {
             api.getTopArticlesForDate(
                 year = "2024",
                 month = "01",
-                day = "15"
+                day = "15",
+                project = "en.wikipedia"
             )
         } returns response
 
@@ -140,7 +147,8 @@ class TopArticlesRepositoryTest {
             api.getTopArticlesForDate(
                 year = "2024",
                 month = "01",
-                day = "15"
+                day = "15",
+                project = "en.wikipedia"
             )
         } throws exception
 
@@ -151,5 +159,4 @@ class TopArticlesRepositoryTest {
     }
 
 }
-
 

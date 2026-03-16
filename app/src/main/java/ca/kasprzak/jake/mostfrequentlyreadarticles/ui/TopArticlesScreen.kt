@@ -1,5 +1,6 @@
 package ca.kasprzak.jake.mostfrequentlyreadarticles.ui
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -61,7 +63,7 @@ fun TopArticlesScreen(
     LaunchedEffect(viewModel.uiEvents) {
         viewModel.uiEvents.collect { event ->
             when (event) {
-                is UiEvent.ShowSnackbar -> {
+                is UiEvent.ShowFailedtoLoadArticlesSnackbar -> {
                     val baseMessage = context.getString(event.messageResId)
                     val fullMessage = if (event.extraInfo != null) {
                         "$baseMessage: ${event.extraInfo}"
@@ -69,6 +71,13 @@ fun TopArticlesScreen(
                         "$baseMessage: ${context.getString(R.string.unknown_error)}"
                     }
                     snackbarHostState.showSnackbar(fullMessage)
+                }
+                is UiEvent.ShowCouldNotOpenArticleSnackbar -> {
+                    snackbarHostState.showSnackbar(context.getString(event.messageResId))
+                }
+                is UiEvent.OpenUrl -> {
+                    val intent = Intent(Intent.ACTION_VIEW, event.uri)
+                    context.startActivity(intent)
                 }
             }
         }
@@ -93,7 +102,8 @@ fun TopArticlesScreen(
         moreArticlesToDisplay = (state as? TopArticlesUiState.Success)?.moreArticlesToDisplay ?: false,
         snackbarHostState = snackbarHostState,
         onChangeDateClicked = viewModel::onDateSelected,
-        onShowMoreClicked = viewModel::changeNumberOfArticlesToDisplay
+        onShowMoreClicked = viewModel::changeNumberOfArticlesToDisplay,
+        onArticleClicked = viewModel::onArticleClicked
     )
 }
 
@@ -107,7 +117,8 @@ private fun TopArticlesContent(
     moreArticlesToDisplay: Boolean,
     snackbarHostState: SnackbarHostState,
     onChangeDateClicked: (LocalDate) -> Unit,
-    onShowMoreClicked: () -> Unit
+    onShowMoreClicked: () -> Unit,
+    onArticleClicked: (TopArticle) -> Unit
 ) {
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
@@ -166,7 +177,8 @@ private fun TopArticlesContent(
                     modifier = Modifier.weight(1f),
                     moreArticlesToDisplay = moreArticlesToDisplay,
                     articlesToDisplay = articlesToDisplay,
-                    clickEvent = onShowMoreClicked
+                    onShowMoreClicked = onShowMoreClicked,
+                    onArticleClicked = onArticleClicked
                 )
             }
         }
@@ -213,7 +225,8 @@ private fun TopArticlesContent(
 private fun ArticlesList(
     moreArticlesToDisplay: Boolean,
     articlesToDisplay: List<TopArticle>,
-    clickEvent: () -> Unit,
+    onShowMoreClicked: () -> Unit,
+    onArticleClicked: (TopArticle) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (articlesToDisplay.isEmpty()) {
@@ -232,10 +245,13 @@ private fun ArticlesList(
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(articlesToDisplay) { article ->
-                ArticleRow(article = article)
+                ArticleRow(
+                    article = article,
+                    onClick = { onArticleClicked(article) }
+                )
             }
             item {
-                ShowMoreButton(moreArticlesToDisplay, clickEvent)
+                ShowMoreButton(moreArticlesToDisplay, onShowMoreClicked)
             }
         }
 
@@ -259,12 +275,24 @@ private fun ShowMoreButton(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ArticleRow(article: TopArticle) {
+private fun ArticleRow(
+    article: TopArticle,
+    onClick: () -> Unit
+) {
+    val containerColor = if (article.url.isEmpty()) {
+        MaterialTheme.colorScheme.errorContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
+            .padding(vertical = 4.dp),
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Row(
             modifier = Modifier
